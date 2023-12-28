@@ -44,13 +44,13 @@ func (i *InteractionResponse) Thinking(isInvisible bool) error {
 
 // Interaction Window Message
 // Component only usual: Input#string
-func (i *InteractionResponse) Window(title, customID string, comp Component) error {
+func (i *InteractionResponse) Window(title, customID string, comps ...*ComponentLine) error {
 	i.Response = &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
 		Data: &discordgo.InteractionResponseData{
 			Title:      title,
 			CustomID:   customID,
-			Components: comp.Parse(),
+			Components: ComponentParse(comps...),
 		},
 	}
 	return i.discord.InteractionRespond(i.interaction, i.Response)
