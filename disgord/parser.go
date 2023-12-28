@@ -59,6 +59,27 @@ type ReactionData struct {
 	FormatText string
 }
 
+type InteractionData struct {
+	GuildID   string
+	Guild     *discordgo.Guild
+	ChannelID string
+	Channel   *discordgo.Channel
+	User      *discordgo.User
+
+	InteractionType discordgo.InteractionType
+	Command         discordgo.ApplicationCommandInteractionData
+	CommandOptions  map[string]ApplicationCommandOptions
+	Component       discordgo.MessageComponentInteractionData
+	Modal           discordgo.ModalSubmitInteractionData
+	ModalValues     map[string]string
+
+	FormatText string
+}
+
+type ApplicationCommandOptions struct {
+	*discordgo.ApplicationCommandInteractionDataOption
+}
+
 func MessageParse(discord *discordgo.Session, m *discordgo.Message) (md MessageData) {
 	md.GuildID = m.GuildID
 	md.Guild, _ = discord.Guild(md.GuildID)
@@ -167,8 +188,6 @@ func VoiceStateParse(discord *discordgo.Session, v *discordgo.VoiceStateUpdate) 
 	return
 }
 
-// ReactionAdd整形
-// ReactionType: add remove remove_all
 func ReactionParse(discord *discordgo.Session, r *discordgo.MessageReaction, eventName string) (rd ReactionData) {
 	rd.GuildID = r.GuildID
 	rd.Guild, _ = discord.Guild(rd.GuildID)
@@ -215,4 +234,63 @@ func ReactionParse(discord *discordgo.Session, r *discordgo.MessageReaction, eve
 	// Formatter
 	rd.FormatText = fmt.Sprintf(`Guild:"%s"  Channel:"%s"  <%s> Type:"%s" Emoji:"%s" => <%s> %s`, guildName, channelName, userName, eventName, rd.EmojiIcon, author, content)
 	return
+}
+
+func InteractionParse(discord *discordgo.Session, i *discordgo.Interaction) (id InteractionData) {
+	id.GuildID = i.GuildID
+	id.Guild, _ = discord.Guild(id.GuildID)
+	guildName := ""
+	if id.Guild != nil {
+		guildName = id.Guild.Name
+	}
+
+	id.ChannelID = i.ChannelID
+	id.Channel, _ = discord.Channel(id.ChannelID)
+	channelName := ""
+	if id.Channel != nil {
+		channelName = id.Channel.Name
+	}
+
+	id.User = i.User
+	userName := ""
+	if id.User != nil {
+		userName = id.User.String()
+	}
+
+	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		id.InteractionType = discordgo.InteractionApplicationCommand
+		id.Command = i.ApplicationCommandData()
+		id.CommandOptions = map[string]ApplicationCommandOptions{}
+		// Optionデータ保存
+		for _, optionData := range id.Command.Options {
+			id.CommandOptions[optionData.Name] = ApplicationCommandOptions{optionData}
+		}
+		//表示
+		id.FormatText = fmt.Sprintf(`Guild:"%s"  Channel:"%s"  <%s> /%s %v`, guildName, channelName, userName, id.Command.Name, id.CommandOptions)
+
+	case discordgo.InteractionMessageComponent:
+		id.InteractionType = discordgo.InteractionMessageComponent
+		id.Component = i.MessageComponentData()
+		//表示
+		id.FormatText = fmt.Sprintf(`Guild:"%s"  Channel:"%s"  <%s> Component_ID:"%s"`, guildName, channelName, userName, id.Component.CustomID)
+
+	case discordgo.InteractionModalSubmit:
+		id.InteractionType = discordgo.InteractionModalSubmit
+		id.Modal = i.ModalSubmitData()
+
+		id.ModalValues = map[string]string{}
+		for _, comp := range id.Modal.Components {
+			data := comp.(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput)
+			id.ModalValues[data.CustomID] = data.Value
+		}
+		//表示
+		id.FormatText = fmt.Sprintf(`Guild:"%s"  Channel:"%s"  <%s> Modal_ID:"%s" %+v`, guildName, channelName, userName, id.Modal.CustomID, id.ModalValues)
+	}
+	return
+}
+
+// discordgo unsupported Attachments
+func (data ApplicationCommandOptions) AttachmentValue(i InteractionData) *discordgo.MessageAttachment {
+	return i.Command.Resolved.Attachments[data.Value.(string)]
 }
