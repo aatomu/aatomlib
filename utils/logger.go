@@ -9,19 +9,16 @@ import (
 	"time"
 )
 
-type LoggerHandler struct {
-	directory string
-}
+type LogLevel int
 
-func Logger(dir string) (l *LoggerHandler, err error) {
-	err = os.MkdirAll(dir, 0755)
-	if err != nil {
-		return
-	}
-	l = &LoggerHandler{
-		directory: dir,
-	}
-	return
+const (
+	Info LogLevel = iota
+	Warn
+	Error
+)
+
+type LoggerHandler struct {
+	Level LogLevel
 }
 
 func (l *LoggerHandler) Info(arg ...any) {
@@ -29,7 +26,7 @@ func (l *LoggerHandler) Info(arg ...any) {
 	f := runtime.FuncForPC(pc)
 	text := fmt.Sprintf("[%s] INFO %s(%s:%d) Message:%s", time.Now().Format("2006-01-02T15:04:05.000"), f.Name(), filepath.Base(file), line, fmt.Sprint(arg...))
 
-	io.WriteString(os.Stdout, text)
+	l.logPrint(Info, text)
 }
 
 func (l *LoggerHandler) Warn(arg ...any) {
@@ -37,7 +34,7 @@ func (l *LoggerHandler) Warn(arg ...any) {
 	f := runtime.FuncForPC(pc)
 	text := fmt.Sprintf("[%s] Warn %s(%s:%d) Message:%s", time.Now().Format("2006-01-02T15:04:05.000"), f.Name(), filepath.Base(file), line, fmt.Sprint(arg...))
 
-	io.WriteString(os.Stdout, text)
+	l.logPrint(Warn, text)
 }
 
 func (l *LoggerHandler) Error(arg ...any) {
@@ -45,5 +42,13 @@ func (l *LoggerHandler) Error(arg ...any) {
 	f := runtime.FuncForPC(pc)
 	text := fmt.Sprintf("[%s] ERROR %s(%s:%d) Message:%s", time.Now().Format("2006-01-02T15:04:05.000"), f.Name(), filepath.Base(file), line, fmt.Sprint(arg...))
 
-	io.WriteString(os.Stderr, text)
+	l.logPrint(Error, text)
+}
+
+func (l *LoggerHandler) logPrint(level LogLevel, text string) {
+	if l.Level >= level {
+		io.WriteString(os.Stdout, text)
+	} else {
+		io.WriteString(os.Stderr, text)
+	}
 }
