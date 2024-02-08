@@ -143,14 +143,14 @@ func (s *encodeSession) run() {
 
 	stderr, err := ffmpeg.StderrPipe()
 	if err != nil {
-		panic("get stdoutpipe error")
+		panic("get stdout pipe error")
 	}
 	defer stderr.Close()
 	go s.readStdErr(stderr)
 
 	stdout, err := ffmpeg.StdoutPipe()
 	if err != nil {
-		s.done <- fmt.Errorf("get stdoutpipe error")
+		s.done <- fmt.Errorf("get stdout pipe error")
 		return
 	}
 	defer stdout.Close()
