@@ -251,7 +251,11 @@ func InteractionParse(discord *discordgo.Session, i *discordgo.Interaction) (id 
 		channelName = id.Channel.Name
 	}
 
-	id.User = i.User
+	if i.User != nil {
+		id.User = i.User
+	} else {
+		id.User = i.Member.User
+	}
 	userName := ""
 	if id.User != nil {
 		userName = id.User.String()
