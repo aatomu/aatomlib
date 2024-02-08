@@ -33,7 +33,6 @@ type encodeSession struct {
 // FFmpeg Options
 type EncodeOpts struct {
 	FlameBuf    int     // default 100(20ms*100=2s)
-	Volume      int     // volume 0-512(default:256)
 	Offset      float64 // encode start time
 	AudioFilter string  // ffmpeg Filters,https://ffmpeg.org/ffmpeg-filters.html#Audio-Filters
 	Compression int     //higher is best quality & slow encoding(0-10)
@@ -49,16 +48,12 @@ type EncodeStats struct {
 func NewMemEncodeStream(v *discordgo.VoiceConnection, r io.Reader, opts EncodeOpts, done chan error) (s *encodeSession) {
 	encodeSetting := EncodeOpts{
 		FlameBuf:    100,
-		Volume:      256,
 		Offset:      opts.Offset,
 		AudioFilter: opts.AudioFilter,
 		Compression: opts.Compression,
 	}
 	if opts.FlameBuf != 0 {
 		encodeSetting.FlameBuf = opts.FlameBuf
-	}
-	if opts.Volume != 0 {
-		encodeSetting.Volume = opts.Volume
 	}
 
 	s = &encodeSession{
@@ -77,16 +72,12 @@ func NewMemEncodeStream(v *discordgo.VoiceConnection, r io.Reader, opts EncodeOp
 func NewFileEncodeStream(v *discordgo.VoiceConnection, f string, opts EncodeOpts, done chan error) (s *encodeSession) {
 	encodeSetting := EncodeOpts{
 		FlameBuf:    100,
-		Volume:      256,
 		Offset:      opts.Offset,
 		AudioFilter: opts.AudioFilter,
 		Compression: opts.Compression,
 	}
 	if opts.FlameBuf != 0 {
 		encodeSetting.FlameBuf = opts.FlameBuf
-	}
-	if opts.Volume != 0 {
-		encodeSetting.Volume = opts.Volume
 	}
 
 	s = &encodeSession{
@@ -120,22 +111,20 @@ func (s *encodeSession) run() {
 	args := []string{
 		// Default
 		"-stats",
-		"-stats_period", "0.1",
+		"-hide_banner",
 		"-i", inFile,
-		"-vol", strconv.Itoa(s.opts.Volume),
 		"-ss", fmt.Sprintf("%.2f", s.opts.Offset),
-		"-compression_level", strconv.Itoa(s.opts.Compression),
-		// Audio Encode Opts
-		"-ab", "64k", // Bitrate
-		"-ar", "48000", //Sampling Rate
-		"-ac", "2", // Audio Channel
-		"-acodec", "libopus", // Audio Codec
-		// Other Encode Opts
-		"-map", "0:a", // Output Stream Map
-		"-f", "ogg", // Encode Format
-		"-frame_duration", "20", // Frame Size
-		"-packet_loss", "1", // Packet Lossing
-		// Output(StdOut)
+		// Audio encode options
+		"-c:a", "libopus", // Audio codec
+		"-ac", "2", // Audio channel
+		"-ar", "48000", //Sampling rate
+		"-b:a", "64k", // Bitrate
+		"-compression_level", strconv.Itoa(s.opts.Compression), // Opus compression
+		"-application", "lowdelay", // Audio quality
+		"-cutoff", "8000", // Audio cut frequency
+		// Other encode options
+		"-f", "ogg", // Encode file format
+		// Output (Stdout)
 	}
 
 	// check Audio Filter
