@@ -15,9 +15,10 @@ type InteractionResponse struct {
 const Invisible uint64 = 1 << 6
 
 func NewInteractionResponse(d *discordgo.Session, i *discordgo.Interaction) (ir *InteractionResponse) {
-	ir.discord = d
-	ir.interaction = i
-	return
+	return &InteractionResponse{
+		discord:     d,
+		interaction: i,
+	}
 }
 
 // Interaction Reply Message
