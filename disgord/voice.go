@@ -32,21 +32,23 @@ func JoinUserVCchannel(discord *discordgo.Session, userID string, micMute, speak
 
 // 音再生
 // end := make(<-chan bool, 1)
-func PlayAudioFile(vcsession *discordgo.VoiceConnection, filename string, speed float64, pitch float64, isPlayback bool, end <-chan bool) error {
-	if err := vcsession.Speaking(true); err != nil {
+func PlayAudioFile(vcSession *discordgo.VoiceConnection, filename string, speed float64, pitch float64, volume float64, isPlayback bool, end <-chan bool) error {
+	if err := vcSession.Speaking(true); err != nil {
 		return err
 	}
-	defer vcsession.Speaking(false)
+	defer vcSession.Speaking(false)
 
 	done := make(chan error)
-	stream := NewFileEncodeStream(vcsession, filename, EncodeOpts{
+	stream := NewFileEncodeStream(vcSession, filename, EncodeOpts{
 		Compression: 1,
-		AudioFilter: fmt.Sprintf("aresample=24000,asetrate=24000*%f/100,atempo=100/%f*%f", pitch*100, pitch*100, speed),
+		AudioFilter: fmt.Sprintf("aresample=24000,asetrate=24000*%.2f/100,atempo=100/%.2f*%.2f,volume=%.2f", pitch*100, pitch*100, speed, volume),
 	}, done)
 
-	var ticker *time.Ticker
-	if !isPlayback {
-		ticker = time.NewTicker(time.Second)
+	ticker := time.NewTicker(time.Second)
+	if isPlayback {
+		defer ticker.Stop()
+	} else {
+		ticker.Stop()
 	}
 
 	for {
