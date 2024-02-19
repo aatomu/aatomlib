@@ -114,7 +114,7 @@ func MessageParse(discord *discordgo.Session, m *discordgo.Message) (md MessageD
 		for _, file := range m.Attachments {
 			attachmentURLs = append(attachmentURLs, file.URL)
 		}
-		attachmentsURL = fmt.Sprintf("Attachments: \"%s\"", strings.Join(attachmentURLs, ","))
+		attachmentsURL = fmt.Sprintf("Attachments:\"%s\"  ", strings.Join(attachmentURLs, " "))
 	}
 
 	// Formatter
